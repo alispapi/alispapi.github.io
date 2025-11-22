@@ -1,80 +1,87 @@
-// Render API Adresin
-const API_BASE_URL = "https://api-2-iq17.onrender.com/api/ftp";
+// API Adresin
+var API_BASE_URL = "https://api-2-iq17.onrender.com/api/ftp";
 
-const filesContainer = document.getElementById('filesContainer');
-const emptyState = document.getElementById('emptyState');
-const totalFilesEl = document.getElementById('totalFiles');
-const totalSizeEl = document.getElementById('totalSize');
+var filesContainer = document.getElementById('filesContainer');
+var emptyState = document.getElementById('emptyState');
+var totalFilesEl = document.getElementById('totalFiles');
+var totalSizeEl = document.getElementById('totalSize');
 
 // Sayfa yüklenince çalış
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Yeni script v2 çalıştı! API'ye gidiliyor..."); // Konsolda bunu göreceğiz
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Script vFinal (No-Backtick) çalıştı...");
     fetchFiles();
 });
 
 async function fetchFiles() {
-    filesContainer.innerHTML = '<p style="text-align:center; padding:20px;">Dosyalar yükleniyor...</p>';
+    if (filesContainer) {
+        filesContainer.innerHTML = '<p style="text-align:center; padding:20px;">Dosyalar yükleniyor...</p>';
+    }
 
     try {
-        // API'den gerçek listeyi çek
-        const response = await fetch(`${API_BASE_URL}/list`);
+        // DÜZELTME 1: Backtick yerine + ile birleştirme yaptık (Hata vermez)
+        var url = API_BASE_URL + "/list";
+        console.log("İstek:", url);
+        
+        var response = await fetch(url);
         
         if (!response.ok) throw new Error('Liste alınamadı');
         
-        const fileNames = await response.json();
-        console.log("API'den gelen dosyalar:", fileNames); // Konsola yazdır
-        
+        var fileNames = await response.json();
         displayFiles(fileNames);
         
     } catch (error) {
         console.error(error);
-        filesContainer.innerHTML = <p style="color:red; text-align:center">Hata: ${error.message}</p>;
+        if (filesContainer) {
+            filesContainer.innerHTML = '<p style="color:red; text-align:center">Hata: ' + error.message + '</p>';
+        }
     }
 }
 
 function displayFiles(fileNames) {
+    if (!filesContainer) return;
     filesContainer.innerHTML = '';
     
-    // İstatistikleri güncelle
     if(totalFilesEl) totalFilesEl.textContent = fileNames.length;
     if(totalSizeEl) totalSizeEl.textContent = "-";
 
-    // Liste boşsa
     if (!fileNames || fileNames.length === 0) {
         if(emptyState) emptyState.classList.add('show');
         filesContainer.style.display = 'none';
         return;
     }
     
-    // Liste doluysa
     if(emptyState) emptyState.classList.remove('show');
     filesContainer.style.display = 'grid';
     
-    fileNames.forEach(name => {
-        const fileCard = document.createElement('div');
+    fileNames.forEach(function(name) {
+        var fileCard = document.createElement('div');
         fileCard.className = 'file-card';
         
-        let icon = '📄';
-        if (name.match(/\.(jpg|png|gif)$/i)) icon = '🖼';
-        else if (name.match(/\.(mp4|mov)$/i)) icon = '🎥';
+        var icon = '📄';
+        if (name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) icon = '🖼';
+        else if (name.match(/\.(mp4|mov|avi)$/i)) icon = '🎥';
+        else if (name.match(/\.(zip|rar|7z)$/i)) icon = '📦';
+        else if (name.match(/\.(pdf)$/i)) icon = '📕';
         
-        fileCard.innerHTML = `
-            <div class="file-card-header">
-                <div class="file-type-icon">${icon}</div>
-                <div class="file-card-info">
-                    <h3 title="${name}">${name}</h3>
-                    <div class="file-card-meta"><span>DriveHQ Dosyası</span></div>
-                </div>
-            </div>
-            <div class="file-card-actions">
-                <button class="btn-action btn-download" onclick="downloadFile('${name}')">⬇ İndir</button>
-            </div>
-        `;
+        // HTML stringini oluştururken de normal tırnak kullandık
+        fileCard.innerHTML = 
+            '<div class="file-card-header">' +
+                '<div class="file-type-icon">' + icon + '</div>' +
+                '<div class="file-card-info">' +
+                    '<h3 title="' + name + '">' + name + '</h3>' +
+                    '<div class="file-card-meta"><span>DriveHQ Dosyası</span></div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="file-card-actions">' +
+                '<button class="btn-action btn-download" onclick="downloadFile(\'' + name + '\')">⬇ İndir</button>' +
+            '</div>';
+            
         filesContainer.appendChild(fileCard);
     });
 }
 
+// DÜZELTME 2: Burada da + işareti kullandık
 window.downloadFile = function(fileName) {
-    const downloadUrl = `${API_BASE_URL}/download?fileName=${encodeURIComponent(fileName)}`;
+    var downloadUrl = API_BASE_URL + "/download?fileName=" + encodeURIComponent(fileName);
     window.location.href = downloadUrl;
 }
