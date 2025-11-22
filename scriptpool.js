@@ -1,5 +1,5 @@
 // API Adresi
-const API_BASE_URL = "https://api-2-iq17.onrender.com/api/ftp";
+const API_BASE_URL = "https://api-2-iq17.onrender.com/api/Ftp";
 
 // Elementler
 const filesContainer = document.getElementById('filesContainer');
@@ -11,15 +11,16 @@ const searchInput = document.getElementById('searchInput');
 
 let allFilesData = [];
 
+// Sayfa yüklendiğinde çalış
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Script vFixed çalıştı...");
+    console.log("FileBridge Pool script çalıştı...");
     fetchFiles();
 
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
-            // Hata önleyici: Dosya ismi olmayan verileri filtrele
-            const filtered = allFilesData.filter(file => 
+            // Dosya ismi olmayan verileri filtrele (güvenli kontrol)
+            const filtered = allFilesData.filter(file =>
                 (file.name || file.Name || "").toLowerCase().includes(term)
             );
             displayFiles(filtered);
@@ -28,53 +29,71 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function fetchFiles() {
-    if (filesContainer) filesContainer.innerHTML = '<p style="text-align:center; padding:20px;">Yükleniyor...</p>';
+    if (filesContainer) {
+        filesContainer.innerHTML = '<p style="text-align:center; padding:20px;">Yükleniyor...</p>';
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/list`);
-        
-        // HATAYI YAKALAYAN KISIM (Satır 31 civarı)
-        if (!response.ok) throw new Error(`API Hatası: ${response.status}`);
-        
+
+        if (!response.ok) {
+            // API 500 vs. dönerse buraya düşer
+            throw new Error(`API Hatası: ${response.status}`);
+        }
+
         allFilesData = await response.json();
         console.log("Gelen Veri:", allFilesData);
-        
+
         updateStats(allFilesData);
         displayFiles(allFilesData);
-        
+
     } catch (error) {
-        console.error(error);
+        console.error("Dosya listesi alınırken hata:", error);
         if (filesContainer) {
-            filesContainer.innerHTML = <p style="color:red; text-align:center">Bağlantı Hatası: ${error.message}</p>;
+            // BURASI DÜZELTİLDİ → template literal backtick ile
+            filesContainer.innerHTML =
+                `<p style="color:red; text-align:center; padding:20px;">
+                    Bağlantı Hatası: ${error.message}
+                 </p>`;
         }
     }
 }
 
 function updateStats(files) {
     if (!files) return;
-    
-    if (totalFilesEl) totalFilesEl.textContent = files.length;
-    
+
+    if (totalFilesEl) {
+        totalFilesEl.textContent = files.length;
+    }
+
     if (totalSizeEl) {
-        // Güvenli toplama işlemi
-        const totalBytes = files.reduce((acc, file) => acc + (file.size || file.Size || 0), 0);
+        const totalBytes = files.reduce(
+            (acc, file) => acc + (file.size || file.Size || 0),
+            0
+        );
         totalSizeEl.textContent = formatFileSize(totalBytes);
     }
 
     if (latestDateEl && files.length > 0) {
-        // Tarih sıralaması (Hata vermesin diye güvenli kontrol)
         const sorted = [...files].sort((a, b) => {
             const dateA = new Date(a.modifiedDate || a.ModifiedDate || 0);
             const dateB = new Date(b.modifiedDate || b.ModifiedDate || 0);
             return dateB - dateA;
         });
-        const lastDate = new Date(sorted[0].modifiedDate || sorted[0].ModifiedDate);
-        latestDateEl.textContent = lastDate.toLocaleDateString('tr-TR');
+
+        const lastDate = new Date(
+            sorted[0].modifiedDate || sorted[0].ModifiedDate
+        );
+
+        latestDateEl.textContent = isNaN(lastDate.getTime())
+            ? "-"
+            : lastDate.toLocaleDateString('tr-TR');
     }
 }
 
 function displayFiles(files) {
     if (!filesContainer) return;
+
     filesContainer.innerHTML = '';
 
     if (!files || files.length === 0) {
@@ -82,28 +101,28 @@ function displayFiles(files) {
         filesContainer.style.display = 'none';
         return;
     }
-    
+
     if (emptyState) emptyState.classList.remove('show');
     filesContainer.style.display = 'grid';
-    
+
     files.forEach(file => {
-        // Backend uyumluluğu (Büyük/Küçük harf kontrolü)
         const name = file.name || file.Name || "İsimsiz Dosya";
         const sizeVal = file.size || file.Size || 0;
         const size = formatFileSize(sizeVal);
-        
+
         const dateRaw = file.modifiedDate || file.ModifiedDate;
-        const date = dateRaw ? new Date(dateRaw).toLocaleDateString('tr-TR') : '-';
+        const date = dateRaw
+            ? new Date(dateRaw).toLocaleDateString('tr-TR')
+            : '-';
 
         const fileCard = document.createElement('div');
         fileCard.className = 'file-card';
-        
+
         let icon = '📄';
         if (name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) icon = '🖼';
         else if (name.match(/\.(mp4|mov|avi)$/i)) icon = '🎥';
         else if (name.match(/\.(zip|rar|7z)$/i)) icon = '📦';
-        
-        // HTML Oluşturma
+
         fileCard.innerHTML = `
             <div class="file-card-header">
                 <div class="file-type-icon">${icon}</div>
@@ -115,32 +134,34 @@ function displayFiles(files) {
                 </div>
             </div>
             <div class="file-card-actions">
-                <button class="btn-action btn-download" onclick="downloadFile('${name}')">⬇ İndir</button>
+                <button class="btn-action btn-download"
+                        onclick="downloadFile('${name}')">
+                    ⬇ İndir
+                </button>
             </div>
         `;
+
         filesContainer.appendChild(fileCard);
     });
 }
 
-// HATALI OLAN 117. SATIR İÇİN DÜZELTİLMİŞ FONKSİYON
+// Boyutu okunabilir formata çevir
 function formatFileSize(bytes) {
-    // Eğer sayı değilse veya 0 ise direkt döndür
     if (!bytes || isNaN(bytes) || bytes === 0) return '0 B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    
-    // Matematiksel koruma
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    // Dizi sınırını aşmamak için kontrol
-    if (i < 0) return '0 B';
-    if (i >= sizes.length) return bytes + ' B';
 
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    if (i < 0) return '0 B';
+    if (i >= sizes.length) return `${bytes} B`;
+
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
-window.downloadFile = function(fileName) {
+// Global download fonksiyonu
+window.downloadFile = function (fileName) {
     const downloadUrl = `${API_BASE_URL}/download?fileName=${encodeURIComponent(fileName)}`;
     window.location.href = downloadUrl;
-}
+};
