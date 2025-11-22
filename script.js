@@ -1,198 +1,56 @@
-// DOM Elementleri
-const uploadArea = document.getElementById('uploadArea');
+// ==============================
+// FileBridge - Dosya Yükleme JS
+// ==============================
+
+const API_BASE_URL = "https://api-2-iq17.onrender.com/api/Ftp";
+
 const fileInput = document.getElementById('fileInput');
-const btnSelect = document.getElementById('btnSelect');
-const btnUpload = document.getElementById('btnUpload');
-const fileList = document.getElementById('fileList');
+const uploadBtn = document.getElementById('uploadBtn');
+const statusText = document.getElementById('statusText');
+const typeSelect = document.getElementById('typeSelect');   // varsa
+const pathInput = document.getElementById('pathInput');     // varsa
 
-// selectedFiles holds objects: { file: File, type: string }
-let selectedFiles = [];
-
-// Dosya seçme butonu
-btnSelect.addEventListener('click', () => {
-    fileInput.click();
-});
-
-// Dosya input değişikliği
-fileInput.addEventListener('change', (e) => {
-    handleFiles(e.target.files);
-});
-
-// Drag & Drop olayları
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('drag-over');
-});
-
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('drag-over');
-});
-
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('drag-over');
-    handleFiles(e.dataTransfer.files);
-});
-
-// Dosyaları işleme
-function handleFiles(files) {
-    const filesArray = Array.from(files);
-    
-    filesArray.forEach(file => {
-        // 100MB kontrolü
-        if (file.size > 100 * 1024 * 1024) {
-            alert(`${file.name} çok büyük! Maksimum 100MB`);
-            return;
-        }
-        
-        // Aynı dosya kontrolü (dosya adı ile)
-        if (!selectedFiles.find(f => f.file.name === file.name)) {
-            selectedFiles.push({ file: file, type: '' }); // type boş - kullanıcı seçecek
-        }
-    });
-    
-    updateFileList();
-    updateUploadButton();
+if (uploadBtn) {
+    uploadBtn.addEventListener('click', handleUpload);
 }
 
-// Dosya listesini güncelleme
-function updateFileList() {
-    fileList.innerHTML = '';
-    
-    selectedFiles.forEach((file, index) => {
-        const entry = file;
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item';
-
-        const fileSize = formatFileSize(entry.file.size);
-
-        fileItem.innerHTML = `
-            <div class="file-item-info">
-                <div class="file-item-icon">📄</div>
-                <div class="file-item-details">
-                    <h4>${entry.file.name}</h4>
-                    <p>${fileSize}</p>
-                </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <select class="file-type-select" onchange="setFileType(${index}, this.value)">
-                    <option value="">Tür seçin</option>
-                    <option value="gorsel">Görsel</option>
-                    <option value="dokuman">Döküman</option>
-                    <option value="video">Video</option>
-                    <option value="diger">Diğer</option>
-                </select>
-                <button class="file-item-remove" onclick="removeFile(${index})">×</button>
-            </div>
-        `;
-
-        fileList.appendChild(fileItem);
-        // Eğer daha önce tür seçilmişse select'e uygula
-        const selects = fileList.getElementsByClassName('file-type-select');
-        if (selects && selects[index]) {
-            selects[index].value = entry.type || '';
-        }
-    });
-}
-
-// Dosya boyutu formatlama
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-}
-
-// Dosya silme
-function removeFile(index) {
-    selectedFiles.splice(index, 1);
-    updateFileList();
-    updateUploadButton();
-}
-
-// Upload butonunu güncelleme
-function updateUploadButton() {
-    // Eğer listede dosya varsa butonu aktifleştir, yoksa pasif yap
-    if (selectedFiles.length > 0) {
-        btnUpload.disabled = false;
-        btnUpload.title = 'Dosyaları Gönder';
-        btnUpload.style.backgroundColor = '#10b981'; // Yeşil renk
-        btnUpload.style.cursor = 'pointer';
-    } else {
-        btnUpload.disabled = true;
-        btnUpload.title = 'Lütfen önce dosya seçin';
-        btnUpload.style.backgroundColor = '#d1d5db'; // Gri renk
-        btnUpload.style.cursor = 'not-allowed';
+async function handleUpload() {
+    if (!fileInput || fileInput.files.length === 0) {
+        showStatus("Lütfen bir dosya seçin.", true);
+        return;
     }
-}
 
-// Set file type from select
-function setFileType(index, type) {
-    if (selectedFiles[index]) {
-        selectedFiles[index].type = type;
-    }
-    updateUploadButton();
-    // Görsel geri bildirim: seçilen option'u elemente uygula (opsiyonel)
-    const selects = document.getElementsByClassName('file-type-select');
-    if (selects && selects[index]) selects[index].value = type;
-}
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("File", file);
 
-// Dosya yükleme
-btnUpload.addEventListener('click', async () => {
-    if (selectedFiles.length === 0) return;
-
-    // API Adresin (Render'dan aldığın adresin sonuna /api/ftp/upload ekle)
-    // ÖRN: const API_URL = "https://api-2-iq17.onrender.com/api/ftp/upload";
-    const API_URL = "https://api-2-iq17.onrender.com/api/ftp/upload"; 
-
-    btnUpload.textContent = 'Yükleniyor...';
-    btnUpload.disabled = true;
-
-    // Progress bar oluştur
-    const progressBar = document.createElement('div');
-    progressBar.className = 'progress-bar';
-    progressBar.innerHTML = '<div class="progress-fill"></div>';
-    btnUpload.after(progressBar);
-    const progressFill = progressBar.querySelector('.progress-fill');
-    progressFill.style.width = '10%'; // Başlangıç
+    // Eğer backend'de FileUploadModel.TargetPath varsa
+    const targetPath = (pathInput && pathInput.value) ? pathInput.value : "/";
+    formData.append("TargetPath", targetPath);
 
     try {
-        // Sadece ilk dosyayı gönderelim (API şu an tek dosya destekliyor gibi görünüyor)
-        // Döngü ile çoklu gönderim de yapılabilir ama önce tekli deneyelim.
-        const fileEntry = selectedFiles[0]; 
-        
-        const formData = new FormData();
-        formData.append('File', fileEntry.file);
-        // Kullanıcının seçtiği türü veya dosya yolunu da gönderebiliriz
-        // formData.append('TargetPath', '/'); 
+        showStatus("Yükleniyor...", false);
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
+        const response = await fetch(`${API_BASE_URL}/upload`, {
+            method: "POST",
             body: formData
         });
 
-        if (response.ok) {
-            progressFill.style.width = '100%';
-            const result = await response.json();
-            
-            setTimeout(() => {
-                alert('✅ Başarılı! ' + (result.message || 'Dosya yüklendi.'));
-                selectedFiles = []; // Listeyi temizle
-                updateFileList();
-                btnUpload.textContent = 'Dosyaları Gönder';
-                updateUploadButton();
-                progressBar.remove();
-            }, 500);
-        } else {
-            throw new Error('Sunucu hatası: ' + response.statusText);
+        const text = await response.text();
+
+        if (!response.ok) {
+            throw new Error(`API Hatası: ${response.status} - ${text}`);
         }
 
-    } catch (error) {
-        console.error(error);
-        progressFill.style.backgroundColor = 'red';
-        alert('❌ Hata oluştu: ' + error.message);
-        btnUpload.textContent = 'Tekrar Dene';
-        btnUpload.disabled = false;
+        showStatus("Dosya başarıyla yüklendi.", false);
+    } catch (err) {
+        console.error("Upload hatası:", err);
+        showStatus(`Yükleme hatası: ${err.message}`, true);
     }
-});
+}
+
+function showStatus(message, isError) {
+    if (!statusText) return;
+    statusText.textContent = message;
+    statusText.style.color = isError ? "red" : "green";
+}

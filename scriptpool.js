@@ -1,4 +1,8 @@
-// API Adresi
+// ==============================
+// FileBridge - Dosya Havuzu JS
+// ==============================
+
+// API Adresi (Render)
 const API_BASE_URL = "https://api-2-iq17.onrender.com/api/Ftp";
 
 // Elementler
@@ -19,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
-            // Dosya ismi olmayan verileri filtrele (güvenli kontrol)
             const filtered = allFilesData.filter(file =>
                 (file.name || file.Name || "").toLowerCase().includes(term)
             );
@@ -36,9 +39,10 @@ async function fetchFiles() {
     try {
         const response = await fetch(`${API_BASE_URL}/list`);
 
+        // 500 gibi durumlarda backend'in gönderdiği metni de oku
         if (!response.ok) {
-            // API 500 vs. dönerse buraya düşer
-            throw new Error(`API Hatası: ${response.status}`);
+            const errorText = await response.text().catch(() => "");
+            throw new Error(`API Hatası: ${response.status} - ${errorText}`);
         }
 
         allFilesData = await response.json();
@@ -50,7 +54,6 @@ async function fetchFiles() {
     } catch (error) {
         console.error("Dosya listesi alınırken hata:", error);
         if (filesContainer) {
-            // BURASI DÜZELTİLDİ → template literal backtick ile
             filesContainer.innerHTML =
                 `<p style="color:red; text-align:center; padding:20px;">
                     Bağlantı Hatası: ${error.message}
