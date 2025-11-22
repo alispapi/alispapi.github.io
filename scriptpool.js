@@ -17,7 +17,7 @@ async function fetchFiles() {
 
     try {
         // API'den gerçek listeyi çek
-        const response = await fetch("https://api-2-iq17.onrender.com/api/ftp/list");
+        const response = await fetch(`${API_BASE_URL}/list`);
         
         if (!response.ok) throw new Error('Liste alınamadı');
         
@@ -75,6 +75,6 @@ function displayFiles(fileNames) {
 }
 
 window.downloadFile = function(fileName) {
-    const downloadUrl = `https://api-2-iq17.onrender.com/api/ftp/download?fileName=${encodeURIComponent(fileName)}`;
+    const downloadUrl = `${API_BASE_URL}/download?fileName=${encodeURIComponent(fileName)}`;
     window.location.href = downloadUrl;
 }
