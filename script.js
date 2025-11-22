@@ -113,10 +113,18 @@ function removeFile(index) {
 
 // Upload butonunu güncelleme
 function updateUploadButton() {
-    // Şimdilik: Upload butonunu devre dışı tut (API bağlandıktan sonra etkinleştireceksiniz)
-    // Butonun etkinleştirilmesi manuel veya API-bağlantı sonrası yapılmalıdır.
-    btnUpload.disabled = true;
-    btnUpload.title = 'API bağlı değil - gerçek yükleme için etkinleştirilecektir.';
+    // Eğer listede dosya varsa butonu aktifleştir, yoksa pasif yap
+    if (selectedFiles.length > 0) {
+        btnUpload.disabled = false;
+        btnUpload.title = 'Dosyaları Gönder';
+        btnUpload.style.backgroundColor = '#10b981'; // Yeşil renk
+        btnUpload.style.cursor = 'pointer';
+    } else {
+        btnUpload.disabled = true;
+        btnUpload.title = 'Lütfen önce dosya seçin';
+        btnUpload.style.backgroundColor = '#d1d5db'; // Gri renk
+        btnUpload.style.cursor = 'not-allowed';
+    }
 }
 
 // Set file type from select
