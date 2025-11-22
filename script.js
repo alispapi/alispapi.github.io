@@ -136,7 +136,7 @@ btnUpload.addEventListener('click', async () => {
 
     // API Adresin (Render'dan aldığın adresin sonuna /api/ftp/upload ekle)
     // ÖRN: const API_URL = "https://api-2-iq17.onrender.com/api/ftp/upload";
-    const API_URL = "SENİN_RENDER_ADRESİN/api/ftp/upload"; 
+    const API_URL = "https://api-2-iq17.onrender.com/api/ftp/upload"; 
 
     btnUpload.textContent = 'Yükleniyor...';
     btnUpload.disabled = true;
