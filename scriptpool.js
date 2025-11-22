@@ -16,7 +16,7 @@ async function fetchFiles() {
 
     try {
         // 1. API'den listeyi iste
-        const response = await fetch(`$https://api-2-iq17.onrender.com/api/ftp/list`);
+        const response = await fetch(`https://api-2-iq17.onrender.com/api/ftp/list`);
         
         if (!response.ok) {
             throw new Error('Liste alınamadı: ' + response.statusText);
