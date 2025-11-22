@@ -131,38 +131,60 @@ function setFileType(index, type) {
 }
 
 // Dosya yükleme
-btnUpload.addEventListener('click', () => {
+btnUpload.addEventListener('click', async () => {
     if (selectedFiles.length === 0) return;
-    
-    btnUpload.textContent = 'Gönderiliyor...';
+
+    // API Adresin (Render'dan aldığın adresin sonuna /api/ftp/upload ekle)
+    // ÖRN: const API_URL = "https://api-2-iq17.onrender.com/api/ftp/upload";
+    const API_URL = "SENİN_RENDER_ADRESİN/api/ftp/upload"; 
+
+    btnUpload.textContent = 'Yükleniyor...';
     btnUpload.disabled = true;
-    
+
     // Progress bar oluştur
     const progressBar = document.createElement('div');
     progressBar.className = 'progress-bar';
     progressBar.innerHTML = '<div class="progress-fill"></div>';
     btnUpload.after(progressBar);
-    
     const progressFill = progressBar.querySelector('.progress-fill');
-    
-    // Simüle edilmiş yükleme (gerçek SFTP bağlantısı için backend gerekir)
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += 10;
-        progressFill.style.width = progress + '%';
+    progressFill.style.width = '10%'; // Başlangıç
+
+    try {
+        // Sadece ilk dosyayı gönderelim (API şu an tek dosya destekliyor gibi görünüyor)
+        // Döngü ile çoklu gönderim de yapılabilir ama önce tekli deneyelim.
+        const fileEntry = selectedFiles[0]; 
         
-        if (progress >= 100) {
-            clearInterval(interval);
+        const formData = new FormData();
+        formData.append('File', fileEntry.file);
+        // Kullanıcının seçtiği türü veya dosya yolunu da gönderebiliriz
+        // formData.append('TargetPath', '/'); 
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            progressFill.style.width = '100%';
+            const result = await response.json();
+            
             setTimeout(() => {
-                // Özet bilgi: dosya isimleri ve seçilen türler (geliştirme amaçlı)
-                const summary = selectedFiles.map(s => `${s.file.name} [${s.type || 'belirsiz'}]`).join('\n');
-                alert('✅ Dosyalar başarıyla gönderildi!\n\n' + summary);
-                selectedFiles = [];
+                alert('✅ Başarılı! ' + (result.message || 'Dosya yüklendi.'));
+                selectedFiles = []; // Listeyi temizle
                 updateFileList();
                 btnUpload.textContent = 'Dosyaları Gönder';
                 updateUploadButton();
                 progressBar.remove();
             }, 500);
+        } else {
+            throw new Error('Sunucu hatası: ' + response.statusText);
         }
-    }, 300);
+
+    } catch (error) {
+        console.error(error);
+        progressFill.style.backgroundColor = 'red';
+        alert('❌ Hata oluştu: ' + error.message);
+        btnUpload.textContent = 'Tekrar Dene';
+        btnUpload.disabled = false;
+    }
 });
